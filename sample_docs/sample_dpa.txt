@@ -1,0 +1,5 @@
+Data Processing Agreement
+Data Categories: employee records
+Retention Period: 2 years
+Sub-processor: CloudHost One
+Breach Notification Hours: 48

@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: vendor-review-agent
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: OPENAI_MODEL_CLASSIFY
+        value: gpt-4o-mini
+      - key: OPENAI_MODEL_EXTRACT
+        value: gpt-4o
+      - key: PROMPT_VERSION_CLASSIFY
+        value: "1.0"
+      - key: PROMPT_VERSION_EXTRACT
+        value: "1.0"
+      - key: PYTHON_VERSION
+        value: "3.11"

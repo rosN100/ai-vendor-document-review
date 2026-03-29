@@ -1,0 +1,5 @@
+Bank Details
+Account Holder: Nexus Data Solutions LLC
+Routing Number: 123456789
+Account Number: 9876543210
+Bank Name: Example National Bank

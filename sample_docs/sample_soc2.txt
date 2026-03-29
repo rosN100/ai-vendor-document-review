@@ -1,0 +1,5 @@
+SOC 2 Type II Report
+Period Start: 2025-01-01
+Period End: 2025-12-31
+Covered Services: managed analytics platform
+Auditor: Assurance Partners LLP

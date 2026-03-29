@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analyst Dashboard</title>
+  <style>
+    :root {
+      --bg: #edf4fa;
+      --panel: #ffffff;
+      --text: #17324a;
+      --muted: #637a8d;
+      --border: #d4e0ec;
+      --accent: #2e75b6;
+      --danger: #b42318;
+      --warn: #c97a10;
+      --ok: #137333;
+      --purple: #6b46c1;
+      --timeline: #e5e7eb;
+      --panel-soft: #f9fafb;
+      --json-string: #137333;
+      --json-number: #2e75b6;
+      --json-null: #94a3b8;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 20px 0;
+    }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .tab {
+      border: 1px solid var(--border);
+      background: #f6fbff;
+      color: var(--text);
+      border-radius: 999px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .tab.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 31% 69%;
+      min-height: calc(100vh - 72px);
+      padding: 16px 20px 20px;
+      gap: 18px;
+    }
+    .sidebar, .content {
+      min-width: 0;
+    }
+    .sidebar {
+      background: #f8fbff;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 20px;
+    }
+    .content {
+      position: relative;
+    }
+    .panel, .queue-item, .flag, .audit-card, details {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+    .queue-item {
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .queue-item:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(23, 50, 74, 0.08);
+    }
+    .queue-item.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(46, 117, 182, 0.08);
+    }
+    .queue-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .btn, button {
+      border: 0;
+      border-radius: 12px;
+      padding: 11px 16px;
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+      font: inherit;
+    }
+    .btn.secondary {
+      background: #f3f7fb;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn.small {
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-right: 8px;
+    }
+    .status-BLOCKED, .event-FLAG_RAISED.CRITICAL, .event-FLAG_RAISED.HIGH, .event-COMPLETENESS_GATE.FAIL, .event-EXTERNAL_CHECK_COMPLETED.HIT {
+      background: #fde8e8;
+      color: var(--danger);
+    }
+    .status-REVIEW_REQUIRED, .event-FLAG_RAISED.MEDIUM, .event-COMPLETENESS_GATE.FAILURE {
+      background: #fff3da;
+      color: var(--warn);
+    }
+    .status-REVIEW_RECOMMENDED, .event-REVIEW_SESSION_STARTED, .event-DOCUMENT_RECEIVED, .event-ROUTING_ASSIGNED {
+      background: #e9f1fb;
+      color: var(--accent);
+    }
+    .status-CLEAR, .event-COMPLETENESS_GATE.PASS, .event-EXTERNAL_CHECK_COMPLETED.CLEAR, .event-ANALYST_DECISION {
+      background: #e7f6ec;
+      color: var(--ok);
+    }
+    .event-CLASSIFICATION, .event-FIELD_EXTRACTED {
+      background: #f1ebff;
+      color: var(--purple);
+    }
+    .event-EXTERNAL_CHECK_COMPLETED {
+      background: #eef2f6;
+      color: var(--muted);
+    }
+    .muted { color: var(--muted); }
+    .kicker {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .flag.CRITICAL, .flag.HIGH { border-left: 5px solid var(--danger); }
+    .flag.MEDIUM { border-left: 5px solid var(--warn); }
+    .flag.LOW { border-left: 5px solid #c2a019; }
+    .severity-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-top: 10px;
+    }
+    .severity-blocked {
+      background: #fde8e8;
+      color: var(--danger);
+    }
+    .severity-review {
+      background: #fff3da;
+      color: var(--warn);
+    }
+    .severity-clear {
+      background: #e7f6ec;
+      color: var(--ok);
+    }
+    .review-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .summary-card {
+      background: #f8fbff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+    }
+    .flag-group {
+      margin-top: 14px;
+    }
+    .flag-group-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .flag-subline {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .field-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .field-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fbfdff;
+    }
+    .field-row.low-confidence {
+      border-color: #f4b6ad;
+      background: #fff7f5;
+    }
+    .field-value {
+      font-weight: 700;
+    }
+    .field-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .confidence-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #eef2f6;
+      color: var(--muted);
+    }
+    .confidence-pill.low {
+      background: #fde8e8;
+      color: var(--danger);
+    }
+    .confidence-pill.medium {
+      background: #fff3da;
+      color: var(--warn);
+    }
+    .confidence-pill.high {
+      background: #e7f6ec;
+      color: var(--ok);
+    }
+    .external-grid {
+      display: grid;
+      gap: 12px;
+    }
+    .external-card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      background: #fbfdff;
+    }
+    .external-card.hit, .external-card.invalid {
+      border-color: #f1b4aa;
+      background: #fff6f5;
+    }
+    .external-card.clear, .external-card.valid {
+      border-color: #b8dfc4;
+      background: #f3fbf5;
+    }
+    .fixed-bar {
+      position: sticky;
+      bottom: 0;
+      background: rgba(237, 244, 250, 0.96);
+      padding-top: 8px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    textarea, input, select {
+      width: 100%;
+      margin-top: 8px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      font: inherit;
+      background: #fff;
+    }
+    .review-toolbar, .audit-header, .filter-bar {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    details {
+      background: var(--panel-soft);
+    }
+    details summary {
+      cursor: pointer;
+      font-weight: 600;
+    }
+    pre, .json-block {
+      background: #f6f9fc;
+      border-radius: 12px;
+      padding: 12px;
+      overflow-x: auto;
+      font-family: "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.55;
+      margin: 0;
+      border: 1px solid #ebf0f5;
+    }
+    .json-key { font-weight: 700; }
+    .json-string { color: var(--json-string); }
+    .json-number { color: var(--json-number); }
+    .json-null { color: var(--json-null); }
+    .timeline {
+      position: relative;
+      padding-left: 24px;
+      margin-left: 10px;
+      border-left: 2px solid var(--timeline);
+    }
+    .timeline-row {
+      position: relative;
+      padding-left: 18px;
+      margin-bottom: 18px;
+    }
+    .timeline-dot {
+      position: absolute;
+      left: -31px;
+      top: 14px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 2px rgba(229, 231, 235, 0.85);
+    }
+    .timeline-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 14px 16px;
+    }
+    .timeline-header {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    .timeline-summary {
+      font-weight: 600;
+    }
+    .timeline-detail {
+      background: var(--panel-soft);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-top: 12px;
+    }
+    .confidence-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 12px 0;
+    }
+    .confidence-bar {
+      width: 160px;
+      height: 10px;
+      border-radius: 999px;
+      background: #dbe6f0;
+      overflow: hidden;
+    }
+    .confidence-bar-fill {
+      height: 100%;
+      background: var(--ok);
+    }
+    .meta-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .meta-table td {
+      border-top: 1px solid var(--border);
+      padding: 10px 8px;
+      vertical-align: top;
+    }
+    .meta-table td:first-child {
+      font-weight: 700;
+      width: 220px;
+    }
+    .hidden {
+      display: none !important;
+    }
+    @media (max-width: 980px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div>
+      <h1 style="margin:0;">Analyst Dashboard</h1>
+      <p class="muted" style="margin:8px 0 0;">Queue, review workspace, and audit trail in one place.</p>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-tab="queue">Queue</button>
+      <button class="tab" data-tab="review">Review</button>
+      <button class="tab" data-tab="audit">Audit Trail</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <h2 style="margin-top:0;">Review Queue</h2>
+      <p class="muted">Sorted by blocked, review-required, then SLA.</p>
+      <div id="queue"></div>
+    </aside>
+    <main class="content">
+      <section id="queue-view" class="view">
+        <div class="panel">
+          <h2>Select a session</h2>
+          <p class="muted">Choose a queue item to review the evidence pack or jump straight into the audit timeline.</p>
+        </div>
+      </section>
+
+      <section id="review-view" class="view hidden">
+        <div id="review-detail" class="panel">
+          <h2>Select a session</h2>
+          <p class="muted">The evidence pack, extracted fields, external checks, and decision controls will appear here.</p>
+        </div>
+      </section>
+
+      <section id="audit-view" class="view hidden">
+        <div id="audit-detail" class="panel">
+          <h2>Audit Trail</h2>
+          <p class="muted">Use the queue buttons or the filter bar to inspect one session or all recent sessions.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const queueEl = document.getElementById("queue");
+    const reviewDetailEl = document.getElementById("review-detail");
+    const auditDetailEl = document.getElementById("audit-detail");
+    const tabs = [...document.querySelectorAll(".tab")];
+    const views = {
+      queue: document.getElementById("queue-view"),
+      review: document.getElementById("review-view"),
+      audit: document.getElementById("audit-view"),
+    };
+
+    let sessions = [];
+    let selectedSessionId = null;
+    let selectedSessionDetail = null;
+    let selectedAuditPayload = null;
+    let auditScope = "global";
+
+    const tierLabels = {
+      T1: "T1 Critical",
+      T2: "T2 Standard",
+      T3: "T3 Light-Touch",
+      T4: "T4 Minimal / Operational",
+    };
+
+    const statusLabels = {
+      BLOCKED: "🔴 BLOCKED",
+      REVIEW_REQUIRED: "🟠 REVIEW REQUIRED",
+      REVIEW_RECOMMENDED: "🟠 REVIEW REQUIRED",
+      CLEAR: "🟢 CLEAR",
+    };
+
+    function statusClass(status) {
+      if (status === "BLOCKED") return "severity-blocked";
+      if (status === "CLEAR") return "severity-clear";
+      return "severity-review";
+    }
+
+    function queuePriority(session) {
+      if (session.status === "BLOCKED") return 0;
+      if (session.status === "REVIEW_REQUIRED" || session.status === "REVIEW_RECOMMENDED") return 1;
+      return 2;
+    }
+
+    function queueSeverityLabel(session) {
+      if (session.status === "BLOCKED") return "🔴 Blocked";
+      if ((session.flag_count || 0) > 0 || session.status !== "CLEAR") return "🟠 Review Required";
+      return "🟢 Clear";
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function setTab(tab) {
+      tabs.forEach((item) => item.classList.toggle("active", item.dataset.tab === tab));
+      Object.entries(views).forEach(([name, node]) => node.classList.toggle("hidden", name !== tab));
+    }
+
+    tabs.forEach((tab) => tab.addEventListener("click", () => setTab(tab.dataset.tab)));
+
+    function formatIso(isoString) {
+      if (!isoString) return "-";
+      const date = new Date(isoString);
+      return Number.isNaN(date.getTime()) ? isoString : date.toLocaleString();
+    }
+
+    function eventAccent(event) {
+      const data = event.data || {};
+      if (event.event === "COMPLETENESS_GATE") return data.gate === "FAIL" ? "var(--danger)" : "var(--ok)";
+      if (event.event === "FLAG_RAISED") {
+        if (data.severity === "CRITICAL") return "var(--danger)";
+        if (data.severity === "HIGH") return "var(--warn)";
+        return "#c2a019";
+      }
+      if (event.event === "CLASSIFICATION" || event.event === "FIELD_EXTRACTED") return "var(--purple)";
+      if (event.event === "EXTERNAL_CHECK_COMPLETED") {
+        if (data.status === "HIT") return "var(--danger)";
+        if (data.status === "CLEAR" || data.status === "VALID") return "var(--ok)";
+        return "var(--muted)";
+      }
+      if (event.event === "ANALYST_DECISION") return "var(--ok)";
+      return "var(--accent)";
+    }
+
+    function eventBadgeClass(event) {
+      const data = event.data || {};
+      if (event.event === "COMPLETENESS_GATE") return `event-${event.event} ${data.gate || ""}`;
+      if (event.event === "FLAG_RAISED") return `event-${event.event} ${data.severity || ""}`;
+      if (event.event === "EXTERNAL_CHECK_COMPLETED") return `event-${event.event} ${data.status || ""}`;
+      return `event-${event.event}`;
+    }
+
+    function syntaxHighlight(value) {
+      const json = JSON.stringify(value, null, 2);
+      return escapeHtml(json)
+        .replace(/&quot;([^&]+?)&quot;(?=:)/g, '<span class="json-key">"$1"</span>')
+        .replace(/: (&quot;.*?&quot;)/g, ': <span class="json-string">$1</span>')
+        .replace(/: (-?\d+(\.\d+)?)/g, ': <span class="json-number">$1</span>')
+        .replace(/: (null|true|false)/g, ': <span class="json-null">$1</span>');
+    }
+
+    function confidenceMarkup(confidenceValue) {
+      if (confidenceValue == null) return "";
+      const ratio = Math.max(0, Math.min(1, Number(confidenceValue)));
+      const color = ratio > 0.85 ? "var(--ok)" : ratio >= 0.60 ? "var(--warn)" : "var(--danger)";
+      return `
+        <div class="confidence-row">
+          <strong>Confidence bar</strong>
+          <div class="confidence-bar"><div class="confidence-bar-fill" style="width:${ratio * 100}%; background:${color};"></div></div>
+          <span>${ratio.toFixed(2)}</span>
+        </div>
+      `;
+    }
+
+    function confidenceClass(value) {
+      if (value < 0.60) return "low";
+      if (value < 0.85) return "medium";
+      return "high";
+    }
+
+    function buildEventSummary(event) {
+      const data = event.data || {};
+      switch (event.event) {
+        case "REVIEW_SESSION_STARTED":
+          return `Session started — ${data.vendor_name || "Unknown vendor"} (${data.vendor_tier || "-"})`;
+        case "DOCUMENT_RECEIVED":
+          return `${data.filename} received — ${data.format} — ${String(data.file_hash || "").slice(0, 20)}...`;
+        case "COMPLETENESS_GATE":
+          return data.gate === "FAIL"
+            ? `Gate FAILED — missing: ${(data.missing || []).join(", ")}`
+            : `Gate PASSED — required documents present`;
+        case "CLASSIFICATION":
+          return `${data.filename || data.doc_id} → ${data.classified_as} (confidence: ${Number(data.confidence || 0).toFixed(2)})`;
+        case "FIELD_EXTRACTED":
+          return `${data.doc_type || "DOC"}: ${data.field_name} = ${data.value ?? "null"} (confidence: ${Number(data.confidence || 0).toFixed(2)})`;
+        case "FLAG_RAISED":
+          return `${data.code} — ${data.severity} — ${data.detail}`;
+        case "EXTERNAL_CHECK_COMPLETED":
+          return `${data.name}: ${data.status} — ${data.detail} (${data.latency_ms}ms)`;
+        case "ROUTING_ASSIGNED":
+          return `${data.status || "REVIEW_REQUIRED"} — ${data.queue} — SLA ${data.sla_hours}hrs`;
+        case "ANALYST_DECISION":
+          return `${data.decision} — ${data.analyst_id} — ${formatIso(data.decided_at)}`;
+        default:
+          return `${event.event} recorded`;
+      }
+    }
+
+    function buildSpecialEventContent(event) {
+      const data = event.data || {};
+      if (event.event === "FIELD_EXTRACTED") {
+        return `
+          ${confidenceMarkup(data.confidence)}
+          <div class="muted">${data.spot_check ? "Spot check flag: ⚠" : "Spot check flag: none"}</div>
+          <div class="muted">Source page: Page ${data.source_page || 1}</div>
+        `;
+      }
+      if (event.event === "FLAG_RAISED") {
+        return `
+          <div class="grid">
+            <div><strong>Rule version</strong><br /><span class="muted">${escapeHtml(data.rule_version || `${data.code} v1.0`)}</span></div>
+            <div><strong>Waiveable</strong><br /><span class="muted">${data.waiveable ? "YES" : "NO 🔒"}</span></div>
+            <div><strong>Delta</strong><br /><span class="muted">${escapeHtml(data.delta || data.detail || "-")}</span></div>
+          </div>
+        `;
+      }
+      if (event.event === "CLASSIFICATION") {
+        return `
+          <div class="grid">
+            <div><strong>Model used</strong><br /><span class="muted">${escapeHtml(data.model || "-")}</span></div>
+            <div><strong>Prompt version</strong><br /><span class="muted">${escapeHtml(data.prompt_version || "-")}</span></div>
+          </div>
+          <div style="margin-top:10px;"><strong>Reasoning</strong><br /><span class="muted">${escapeHtml(data.reasoning || "-")}</span></div>
+        `;
+      }
+      return "";
+    }
+
+    function copyJson(data) {
+      navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+    }
+
+    function rawLogDownload(sessionId, events) {
+      const payload = events.map((event) => JSON.stringify(event)).join("\n");
+      const blob = new Blob([payload], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${sessionId}.log`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function estimateTokens(session, auditPayload) {
+      const reviews = session.document_reviews || [];
+      const estimatedChars = reviews.reduce((sum, review) => {
+        const extraction = review.extraction ? JSON.stringify(review.extraction).length : 0;
+        return sum + extraction + (review.classification?.reasoning || "").length + 1600;
+      }, 0);
+      return `~${Math.max(estimatedChars / 4, auditPayload.llm_calls * 800).toFixed(0)}`;
+    }
+
+    function buildMetadata(session, auditPayload) {
+      const events = auditPayload.events || [];
+      const started = events[0]?.timestamp;
+      const ended = events[events.length - 1]?.timestamp;
+      const duration = started && ended
+        ? `${Math.max(1, Math.round((new Date(ended) - new Date(started)) / 1000))} seconds`
+        : "-";
+      const ocrUsed = (session.documents || []).some((doc) => doc.ocr_used) ? "Yes" : "No";
+      return `
+        <details class="panel">
+          <summary><strong>Technical Metadata</strong></summary>
+          <table class="meta-table">
+            <tr><td>Session ID</td><td>${escapeHtml(session.session_id)}</td></tr>
+            <tr><td>Pipeline version</td><td>1.0</td></tr>
+            <tr><td>Classify model</td><td>${escapeHtml((events.find((event) => event.event === "CLASSIFICATION")?.data?.model) || "gpt-4o-mini")} (PROMPT_VERSION ${(events.find((event) => event.event === "CLASSIFICATION")?.data?.prompt_version) || "1.0"})</td></tr>
+            <tr><td>Extract model</td><td>${escapeHtml((events.find((event) => event.event === "FIELD_EXTRACTED")?.data?.model) || "gpt-4o")} (PROMPT_VERSION ${(events.find((event) => event.event === "FIELD_EXTRACTED")?.data?.prompt_version) || "1.0"})</td></tr>
+            <tr><td>Total LLM calls</td><td>${auditPayload.llm_calls}</td></tr>
+            <tr><td>Total tokens (est.)</td><td>${estimateTokens(session, auditPayload)}</td></tr>
+            <tr><td>Documents processed</td><td>${(session.documents || []).length}</td></tr>
+            <tr><td>OCR used</td><td>${ocrUsed}</td></tr>
+            <tr><td>Processing time</td><td>${duration}</td></tr>
+            <tr><td>Audit log file</td><td>logs/${escapeHtml(session.session_id)}.log</td></tr>
+            <tr><td>Summary file</td><td>logs/${escapeHtml(session.session_id)}.summary.json</td></tr>
+            <tr><td>Download Audit Log</td><td><button class="btn secondary small" onclick='rawLogDownload("${escapeHtml(session.session_id)}", window.__lastAuditEvents["${escapeHtml(session.session_id)}"])'>Download Audit Log</button></td></tr>
+          </table>
+        </details>
+      `;
+    }
+
+    function buildTimeline(events) {
+      if (!events.length) {
+        return `<div class="panel"><p class="muted">No audit events matched the current filters.</p></div>`;
+      }
+      return `<div class="timeline">${events.map((event, index) => `
+        <div class="timeline-row">
+          <div class="timeline-dot" style="background:${eventAccent(event)};"></div>
+          <div class="timeline-card">
+            <div class="timeline-header">
+              <span class="muted">${formatIso(event.timestamp)}</span>
+              <span class="badge ${eventBadgeClass(event)}">${escapeHtml(event.event)}</span>
+            </div>
+            <div class="timeline-summary">${escapeHtml(buildEventSummary(event))}</div>
+            <details style="margin-top:10px;">
+              <summary>View detail</summary>
+              <div class="timeline-detail">
+                ${buildSpecialEventContent(event)}
+                <div style="display:flex; justify-content:flex-end; margin:10px 0 8px;">
+                  <button class="btn secondary small" onclick='copyJson(window.__eventCache[${index}])'>Copy JSON</button>
+                </div>
+                <pre class="json-block">${syntaxHighlight(event.data || {})}</pre>
+              </div>
+            </details>
+          </div>
+        </div>
+      `).join("")}</div>`;
+    }
+
+    async function loadQueue() {
+      const response = await fetch("/sessions");
+      sessions = (await response.json()).sort((a, b) => {
+        const priorityDiff = queuePriority(a) - queuePriority(b);
+        if (priorityDiff !== 0) return priorityDiff;
+        return (a.sla_hours || 999) - (b.sla_hours || 999);
+      });
+      queueEl.innerHTML = "";
+      sessions.forEach((session) => {
+        const div = document.createElement("div");
+        div.className = "queue-item" + (session.session_id === selectedSessionId ? " selected" : "");
+        div.innerHTML = `
+          <div><span class="badge status-${session.status}">${escapeHtml(statusLabels[session.status] || session.status)}</span><strong>${escapeHtml(session.vendor_name)}</strong></div>
+          <div class="muted">${escapeHtml(session.vendor_tier)} · SLA ${session.sla_hours ?? "-"}h</div>
+          <div class="muted">${escapeHtml(session.contact_email)}</div>
+          <div class="severity-chip ${statusClass(session.status)}">${queueSeverityLabel(session)}</div>
+          <div class="muted" style="margin-top:8px;">Flags: ${session.flag_count}</div>
+          <div class="queue-actions">
+            <button class="btn small">Open Review</button>
+            <button class="btn secondary small" data-audit-id="${escapeHtml(session.session_id)}">View Audit Trail</button>
+          </div>
+        `;
+        div.querySelector(".btn.small").onclick = (evt) => {
+          evt.stopPropagation();
+          loadDetail(session.session_id);
+        };
+        div.querySelector("[data-audit-id]").onclick = (evt) => {
+          evt.stopPropagation();
+          showSessionAudit(session.session_id);
+        };
+        div.onclick = () => loadDetail(session.session_id);
+        queueEl.appendChild(div);
+      });
+    }
+
+    function inferFlagFields(flag) {
+      const detail = `${flag.detail || ""} ${flag.title || ""}`;
+      if (/W-?9/i.test(detail) && /MSA/i.test(detail)) return "W9 vs MSA";
+      if (/W-?9/i.test(detail) && /BANK/i.test(detail)) return "W9 vs BANK";
+      if (/COI/i.test(detail) && /MSA/i.test(detail)) return "COI vs MSA";
+      if (/OFAC/i.test(flag.code || "")) return "Entity screening";
+      if (/ABA/i.test(flag.code || "")) return "Routing number";
+      return flag.category || "Document fields";
+    }
+
+    function renderFlagGroup(title, emoji, flags, severityClass) {
+      if (!flags.length) return "";
+      return `
+        <div class="flag-group">
+          <div class="flag-group-title">${emoji} ${title}</div>
+          ${flags.map((flag) => `
+            <div class="flag ${severityClass}">
+              <strong>${escapeHtml(flag.code)}</strong>
+              <div style="margin-top:6px; font-weight:700;">${escapeHtml(flag.title || flag.detail || "Flag raised")}</div>
+              <div class="flag-subline">${escapeHtml(flag.detail || "No detail provided.")}</div>
+              <div class="flag-subline"><strong>Involved fields:</strong> ${escapeHtml(inferFlagFields(flag))}</div>
+              <div class="flag-subline"><strong>Reason code:</strong> ${escapeHtml(flag.code)}</div>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function formatFlags(flags) {
+      if (!flags.length) {
+        return "<div class='panel'><strong>🟢 No active flags</strong><p class='muted'>This submission is currently clear.</p></div>";
+      }
+      const critical = flags.filter((flag) => flag.severity === "CRITICAL");
+      const high = flags.filter((flag) => flag.severity === "HIGH");
+      const mediumLow = flags.filter((flag) => flag.severity === "MEDIUM" || flag.severity === "LOW");
+      return `
+        ${renderFlagGroup("Critical", "🔴", critical, "CRITICAL")}
+        ${renderFlagGroup("High", "🟠", high, "HIGH")}
+        ${renderFlagGroup("Medium / Low", "🟡", mediumLow, "MEDIUM")}
+      `;
+    }
+
+    function formatReviews(reviews) {
+      return reviews.map((review) => {
+        const extraction = review.extraction || {};
+        const confidence = extraction.confidence || {};
+        const fields = Object.entries(extraction)
+          .filter(([key]) => !["confidence", "spot_check"].includes(key))
+          .map(([key, value]) => {
+            const score = Number(confidence[key] ?? 0);
+            const lowConfidence = score < 0.85;
+            const label = score ? `Confidence ${score.toFixed(2)}` : "Confidence n/a";
+            return `
+              <div class="field-row ${lowConfidence ? "low-confidence" : ""}">
+                <div>
+                  <div class="muted">${escapeHtml(key)}</div>
+                  <div class="field-value">${escapeHtml(Array.isArray(value) ? value.join(", ") : value ?? "null")}</div>
+                </div>
+                <div class="field-meta">
+                  <span class="confidence-pill ${confidenceClass(score)}">${label}</span>
+                  ${lowConfidence ? '<span class="confidence-pill low">Needs review</span>' : ""}
+                </div>
+              </div>
+            `;
+          }).join("");
+        return `
+          <details>
+            <summary>${escapeHtml(review.filename)} · ${escapeHtml(review.classification.doc_type)} (${Number(review.classification.confidence || 0).toFixed(2)})</summary>
+            <div class="field-list">${fields || "<div class='muted'>No extracted fields.</div>"}</div>
+          </details>
+        `;
+      }).join("");
+    }
+
+    function formatExternalChecks(checks) {
+      if (!checks.length) {
+        return "<div class='panel'><p class='muted'>No external checks were recorded.</p></div>";
+      }
+      return `
+        <div class="external-grid">
+          ${checks.map((check) => {
+            const status = String(check.status || "").toLowerCase();
+            const cardClass = status === "hit" || status === "invalid" ? status : (status === "clear" || status === "valid" ? status : "");
+            return `
+              <div class="external-card ${cardClass}">
+                <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                  <strong>${escapeHtml(check.name)}</strong>
+                  <span class="badge ${status === "hit" || status === "invalid" ? "status-BLOCKED" : "status-CLEAR"}">${escapeHtml(check.name)}: ${escapeHtml(check.status)}</span>
+                </div>
+                <div style="margin-top:8px;">${escapeHtml(check.detail)}</div>
+                <div class="muted" style="margin-top:6px;">Latency: ${check.latency_ms}ms</div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+    }
+
+    async function loadDetail(sessionId) {
+      selectedSessionId = sessionId;
+      const response = await fetch(`/sessions/${sessionId}`);
+      const payload = await response.json();
+      const session = payload.session;
+      selectedSessionDetail = session;
+      setTab("review");
+      await loadQueue();
+      reviewDetailEl.innerHTML = `
+        <div class="review-toolbar">
+          <div>
+            <div class="kicker">Review Workspace</div>
+            <h2 style="margin:0;">${escapeHtml(session.vendor_name)}</h2>
+            <p class="muted" style="margin:8px 0 0;">Queue: ${escapeHtml(session.routing?.queue || "-")} · SLA ${session.routing?.sla_hours ?? "-"}h</p>
+          </div>
+          <button class="btn secondary" onclick='showSessionAudit("${escapeHtml(session.session_id)}")'>View Audit Trail</button>
+        </div>
+        <div class="panel">
+          <div><span class="badge status-${session.status}">${escapeHtml(statusLabels[session.status] || session.status)}</span><strong>${escapeHtml(tierLabels[session.vendor_tier] || session.vendor_tier)}</strong></div>
+          <div class="review-summary">
+            <div class="summary-card"><div class="muted">Queue</div><strong>${escapeHtml(session.routing?.queue || "-")}</strong></div>
+            <div class="summary-card"><div class="muted">SLA</div><strong>${session.routing?.sla_hours ?? "-"}h</strong></div>
+            <div class="summary-card"><div class="muted">Flags</div><strong>${session.validation.flags.length}</strong></div>
+            <div class="summary-card"><div class="muted">External checks</div><strong>${session.validation.external_checks.length}</strong></div>
+          </div>
+          <pre>${escapeHtml(session.evidence_pack_markdown)}</pre>
+        </div>
+        <div class="panel">
+          <h3>Flags Requiring Attention</h3>
+          ${formatFlags(session.validation.flags)}
+        </div>
+        <div class="panel">
+          <h3>Extracted Fields</h3>
+          ${formatReviews(session.document_reviews)}
+        </div>
+        <div class="panel">
+          <h3>External Checks</h3>
+          ${formatExternalChecks(session.validation.external_checks || [])}
+        </div>
+        <div class="fixed-bar">
+          <div class="panel">
+            <h3>Decision</h3>
+            <div class="grid">
+              <label>Decision
+                <select id="decision">
+                  <option value="APPROVED">APPROVED</option>
+                  <option value="REJECTED">REJECTED</option>
+                  <option value="WAIVED">WAIVED</option>
+                  <option value="NEEDS_INFO">NEEDS_INFO</option>
+                </select>
+              </label>
+              <label>Analyst ID<input id="analyst-id" /></label>
+            </div>
+            <label>Notes<textarea id="analyst-notes" rows="3"></textarea></label>
+            <button onclick="submitDecision()">Submit Decision</button>
+          </div>
+        </div>
+      `;
+    }
+
+    async function submitDecision() {
+      const payload = {
+        decision: document.getElementById("decision").value,
+        analyst_id: document.getElementById("analyst-id").value,
+        analyst_notes: document.getElementById("analyst-notes").value,
+        flags_waived: [],
+      };
+      await fetch(`/sessions/${selectedSessionId}/decision`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      await loadQueue();
+      await loadDetail(selectedSessionId);
+    }
+
+    function flattenEvents(auditPayloads) {
+      return auditPayloads.flatMap((payload) => payload.events.map((event) => ({ ...event, session_id: payload.session_id })))
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    }
+
+    function applyAuditFilters(events) {
+      const search = (document.getElementById("audit-search")?.value || "").trim().toLowerCase();
+      const status = document.getElementById("audit-status")?.value || "ALL";
+      const from = document.getElementById("audit-from")?.value;
+      const to = document.getElementById("audit-to")?.value;
+      return events.filter((event) => {
+        const session = sessions.find((item) => item.session_id === event.session_id);
+        const haystack = `${event.session_id} ${session?.vendor_name || ""}`.toLowerCase();
+        if (search && !haystack.includes(search)) return false;
+        if (status !== "ALL" && session?.status !== status) return false;
+        const eventDate = new Date(event.timestamp);
+        if (from && eventDate < new Date(from)) return false;
+        if (to) {
+          const endDate = new Date(to);
+          endDate.setHours(23, 59, 59, 999);
+          if (eventDate > endDate) return false;
+        }
+        return true;
+      });
+    }
+
+    async function showGlobalAudit() {
+      setTab("audit");
+      auditScope = "global";
+      const payloads = await Promise.all(sessions.map(async (session) => fetch(`/sessions/${session.session_id}/audit`).then((response) => response.json())));
+      const events = flattenEvents(payloads);
+      window.__eventCache = events;
+      auditDetailEl.innerHTML = `
+        <div class="filter-bar panel">
+          <label style="flex:1;">Search by vendor name or session ID<input id="audit-search" placeholder="Search..." /></label>
+          <label>Filter by status
+            <select id="audit-status">
+              <option value="ALL">All</option>
+              <option value="BLOCKED">BLOCKED</option>
+              <option value="REVIEW_REQUIRED">REVIEW_REQUIRED</option>
+              <option value="REVIEW_RECOMMENDED">REVIEW_RECOMMENDED</option>
+              <option value="CLEAR">CLEAR</option>
+            </select>
+          </label>
+          <label>Date range: from<input id="audit-from" type="date" /></label>
+          <label>to<input id="audit-to" type="date" /></label>
+        </div>
+        <div id="audit-global-results"></div>
+      `;
+      const renderFiltered = () => {
+        const filtered = applyAuditFilters(events);
+        window.__eventCache = filtered;
+        document.getElementById("audit-global-results").innerHTML = buildTimeline(filtered);
+      };
+      ["audit-search", "audit-status", "audit-from", "audit-to"].forEach((id) => {
+        document.getElementById(id).addEventListener("input", renderFiltered);
+        document.getElementById(id).addEventListener("change", renderFiltered);
+      });
+      renderFiltered();
+    }
+
+    async function showSessionAudit(sessionId) {
+      selectedSessionId = sessionId;
+      const sessionResponse = await fetch(`/sessions/${sessionId}`);
+      const detailPayload = await sessionResponse.json();
+      const session = detailPayload.session;
+      selectedSessionDetail = session;
+      const auditResponse = await fetch(`/sessions/${sessionId}/audit`);
+      const auditPayload = await auditResponse.json();
+      selectedAuditPayload = auditPayload;
+      window.__lastAuditEvents = window.__lastAuditEvents || {};
+      window.__lastAuditEvents[sessionId] = auditPayload.events;
+      window.__eventCache = auditPayload.events;
+      setTab("audit");
+      auditScope = "session";
+      auditDetailEl.innerHTML = `
+        <div class="panel">
+          <div class="audit-header">
+            <div>
+              <div class="kicker">Session Audit</div>
+              <h2 style="margin:0;">Session: ${escapeHtml(session.session_id)} | Vendor: ${escapeHtml(session.vendor_name)}</h2>
+              <p class="muted" style="margin:8px 0 0;">Tier: ${escapeHtml(tierLabels[session.vendor_tier] || session.vendor_tier)} | Started: ${formatIso(session.created_at)}</p>
+            </div>
+            <button class="btn secondary" onclick="showGlobalAudit()">View All Sessions</button>
+          </div>
+          ${buildTimeline(auditPayload.events)}
+          ${buildMetadata(session, auditPayload)}
+        </div>
+      `;
+    }
+
+    async function init() {
+      await loadQueue();
+      tabs.find((tab) => tab.dataset.tab === "audit").addEventListener("click", () => showGlobalAudit());
+      tabs.find((tab) => tab.dataset.tab === "queue").addEventListener("click", () => setTab("queue"));
+      tabs.find((tab) => tab.dataset.tab === "review").addEventListener("click", () => setTab("review"));
+    }
+
+    window.copyJson = copyJson;
+    window.rawLogDownload = rawLogDownload;
+    window.showSessionAudit = showSessionAudit;
+
+    init();
+  </script>
+</body>
+</html>

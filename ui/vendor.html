@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vendor Submission Portal</title>
+  <style>
+    :root {
+      --accent: #2e75b6;
+      --accent-dark: #1f4e79;
+      --bg: #f5f8fc;
+      --card: #ffffff;
+      --text: #153047;
+      --muted: #617789;
+      --border: #d7e3ef;
+      --success: #2f855a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #eef5fb 0%, #f9fbfd 100%);
+      color: var(--text);
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 16px 64px;
+    }
+    .hero {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 16px 40px rgba(21, 48, 71, 0.08);
+    }
+    h1, h2 { margin-top: 0; }
+    .progress {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 20px 0 28px;
+    }
+    .step-pill {
+      padding: 12px;
+      text-align: center;
+      border-radius: 999px;
+      background: #e7eef6;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .step-pill.active {
+      background: var(--accent);
+      color: white;
+    }
+    .card {
+      margin-top: 18px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+    input, select {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 14px;
+    }
+    .checkbox-row {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .checkbox {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #f8fbfe;
+    }
+    .doc-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .doc-item {
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fbfdff;
+    }
+    .doc-item.ready {
+      border-color: #b7e4c7;
+      background: #eefaf2;
+      color: var(--success);
+    }
+    button {
+      background: var(--accent);
+      color: white;
+      border: 0;
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    button:hover { background: var(--accent-dark); }
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+    .muted { color: var(--muted); }
+    .result { display: none; }
+    @media (max-width: 640px) {
+      .progress { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="hero">
+      <h1>Vendor Submission Portal</h1>
+      <p class="muted">Complete the intake in three steps. We’ll calculate the review tier and only ask for the documents needed for that path.</p>
+      <div class="progress">
+        <div class="step-pill active" data-step-pill="1">1. Company</div>
+        <div class="step-pill" data-step-pill="2">2. Qualification</div>
+        <div class="step-pill" data-step-pill="3">3. Documents</div>
+      </div>
+      <form id="review-form">
+        <section class="card step" data-step="1">
+          <h2>Company Details</h2>
+          <div class="grid">
+            <label>Legal Entity Name<input name="entity_name" required /></label>
+            <label>DBA<input name="dba_name" /></label>
+            <label>Entity Type<input name="entity_type" /></label>
+            <label>TIN<input name="tin" /></label>
+            <label>Contact Name<input name="contact_name" required /></label>
+            <label>Contact Email<input name="contact_email" type="email" required /></label>
+          </div>
+        </section>
+        <section class="card step" data-step="2" hidden>
+          <h2>Tier Qualification</h2>
+          <div class="checkbox-row">
+            <label class="checkbox"><input type="checkbox" name="handles_data" /> Handles customer or employee data</label>
+            <label class="checkbox"><input type="checkbox" name="system_access" /> Has access to internal systems or credentials</label>
+            <label class="checkbox"><input type="checkbox" name="regulated_industry" /> Operates in a regulated industry</label>
+            <label class="checkbox"><input type="checkbox" name="facilities_only" /> Provides physical or facilities-only services</label>
+          </div>
+          <div class="grid">
+            <label>Annual Contract Value
+              <select name="contract_value_band">
+                <option value="under_50k">Under $50k</option>
+                <option value="50k_to_500k">$50k to $500k</option>
+                <option value="over_500k">Over $500k</option>
+              </select>
+            </label>
+            <label>Engagement Type
+              <select name="engagement_type">
+                <option value="ongoing">Ongoing</option>
+                <option value="one_time">One-time</option>
+              </select>
+            </label>
+          </div>
+          <div class="card" style="margin-top:16px;">
+            <strong>Computed Tier:</strong> <span id="tier-label">T2 — Standard Vendor</span>
+          </div>
+        </section>
+        <section class="card step" data-step="3" hidden>
+          <h2>Document Upload</h2>
+          <p class="muted">Upload the required document set for the computed tier.</p>
+          <div id="doc-checklist" class="doc-list"></div>
+          <label>Files
+            <input type="file" name="files" id="files" multiple required />
+          </label>
+          <p id="loading" class="muted" hidden>Submitting and running review pipeline...</p>
+        </section>
+        <div class="actions">
+          <button type="button" id="next-btn">Next</button>
+        </div>
+      </form>
+      <div class="card result" id="result-card">
+        <h2>Submission Received</h2>
+        <p id="result-text"></p>
+      </div>
+    </div>
+  </div>
+  <script>
+    const stepPills = document.querySelectorAll("[data-step-pill]");
+    const steps = document.querySelectorAll(".step");
+    const nextBtn = document.getElementById("next-btn");
+    const form = document.getElementById("review-form");
+    const resultCard = document.getElementById("result-card");
+    const resultText = document.getElementById("result-text");
+    const tierLabel = document.getElementById("tier-label");
+    const checklist = document.getElementById("doc-checklist");
+    const loading = document.getElementById("loading");
+    let currentStep = 1;
+
+    const requiredDocs = {
+      T1: ["MSA", "COI", "W9", "BANK", "DPA", "SOC2"],
+      T2: ["MSA", "COI", "W9", "BANK"],
+      T3: ["COI"],
+      T4: ["COI"],
+    };
+
+    function computeTier() {
+      const data = new FormData(form);
+      const handlesData = data.get("handles_data") === "on";
+      const systemAccess = data.get("system_access") === "on";
+      const regulated = data.get("regulated_industry") === "on";
+      const facilitiesOnly = data.get("facilities_only") === "on";
+      const contractBand = data.get("contract_value_band");
+      const engagementType = data.get("engagement_type");
+      if (handlesData || systemAccess || regulated || contractBand === "over_500k") return "T1";
+      if (facilitiesOnly && contractBand === "under_50k") return "T4";
+      if (engagementType === "one_time" && contractBand === "under_50k") return "T3";
+      return "T2";
+    }
+
+    function renderTier() {
+      const tier = computeTier();
+      const labelMap = {
+        T1: "T1 — Critical Vendor",
+        T2: "T2 — Standard Vendor",
+        T3: "T3 — Light-Touch Vendor",
+        T4: "T4 — Minimal / Operational Vendor",
+      };
+      tierLabel.textContent = labelMap[tier];
+      checklist.innerHTML = "";
+      requiredDocs[tier].forEach((doc) => {
+        const item = document.createElement("div");
+        item.className = "doc-item ready";
+        item.textContent = "Required: " + doc;
+        checklist.appendChild(item);
+      });
+      if (!requiredDocs[tier].length) {
+        const item = document.createElement("div");
+        item.className = "doc-item";
+        item.textContent = "No documents required for this tier.";
+        checklist.appendChild(item);
+      }
+    }
+
+    function showStep(stepNumber) {
+      currentStep = stepNumber;
+      steps.forEach((step) => step.hidden = Number(step.dataset.step) !== stepNumber);
+      stepPills.forEach((pill) => pill.classList.toggle("active", Number(pill.dataset.stepPill) === stepNumber));
+      nextBtn.textContent = stepNumber === 3 ? "Submit" : "Next";
+    }
+
+    form.addEventListener("change", renderTier);
+    nextBtn.addEventListener("click", async () => {
+      if (currentStep < 3) {
+        showStep(currentStep + 1);
+        return;
+      }
+      loading.hidden = false;
+      nextBtn.disabled = true;
+      const payload = new FormData(form);
+      try {
+        const response = await fetch("/review", { method: "POST", body: payload });
+        const session = await response.json();
+        resultCard.style.display = "block";
+        resultText.textContent = `Session ${session.session_id} created. We’ll contact ${session.contact_email} if anything else is needed.`;
+        form.style.display = "none";
+      } catch (error) {
+        resultCard.style.display = "block";
+        resultText.textContent = "Submission failed. Please try again.";
+      } finally {
+        loading.hidden = true;
+        nextBtn.disabled = false;
+      }
+    });
+
+    renderTier();
+  </script>
+</body>
+</html>

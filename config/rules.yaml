@@ -1,0 +1,64 @@
+fuzzy_match_threshold: 90
+
+required_docs:
+  T1: [MSA, COI, W9, BANK, DPA, SOC2]
+  T2: [MSA, COI, W9, BANK]
+  T3: [COI]
+  T4: [COI]
+
+rules:
+  COI_EXPIRY_001:
+    description: "COI must not expire within 30 days of review date"
+    field: expiry_date
+    doc_type: COI
+    condition: "expiry_date > today + 30 days"
+    severity: {T1: CRITICAL, T2: HIGH, T3: MEDIUM, T4: LOW}
+    waiveable: false
+
+  COI_COVERAGE_001:
+    description: "General liability coverage must be >= $1,000,000"
+    field: coverage_amount_usd
+    doc_type: COI
+    condition: "coverage_amount_usd >= 1000000"
+    severity: {T1: CRITICAL, T2: HIGH, T3: SKIP, T4: SKIP}
+    waiveable: true
+
+  SOC2_AGE_001:
+    description: "SOC 2 report must be less than 12 months old"
+    field: audit_period_end
+    doc_type: SOC2
+    condition: "audit_period_end > today - 365 days"
+    severity: {T1: CRITICAL, T2: HIGH, T3: SKIP, T4: SKIP}
+    waiveable: true
+
+  W9_SIGNATURE_001:
+    description: "W-9 must be signed within the last 3 years"
+    field: signature_date
+    doc_type: W9
+    condition: "signature_date > today - 1095 days"
+    severity: {T1: HIGH, T2: MEDIUM, T3: LOW, T4: SKIP}
+    waiveable: true
+
+  DPA_BREACH_001:
+    description: "DPA breach notification window must be <= 72 hours"
+    field: breach_notification_hours
+    doc_type: DPA
+    condition: "breach_notification_hours <= 72"
+    severity: {T1: CRITICAL, T2: HIGH, T3: SKIP, T4: SKIP}
+    waiveable: false
+
+cross_doc_checks:
+  ENTITY_NAME_MATCH:
+    description: "Entity name must match across W-9, MSA, and COI"
+    fields: [W9.legal_entity_name, MSA.party_b, COI.insured_entity_name]
+    severity: {T1: CRITICAL, T2: HIGH, T3: MEDIUM, T4: LOW}
+
+  COI_COVERS_MSA_TERM:
+    description: "COI coverage must cover the MSA contract term"
+    fields: [COI.expiry_date, MSA.effective_date, MSA.term_length]
+    severity: {T1: HIGH, T2: MEDIUM, T3: LOW, T4: LOW}
+
+  BANK_HOLDER_MATCH:
+    description: "Bank account holder must match W-9 entity name"
+    fields: [BANK.account_holder_name, W9.legal_entity_name]
+    severity: {T1: HIGH, T2: HIGH, T3: MEDIUM, T4: LOW}
