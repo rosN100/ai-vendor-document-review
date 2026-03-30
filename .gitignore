@@ -5,3 +5,8 @@ __pycache__/
 *.pyo
 *.pyd
 .pytest_cache/
+.DS_Store
+.venv/
+venv/
+dist/
+build/
